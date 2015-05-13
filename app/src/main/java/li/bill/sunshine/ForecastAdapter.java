@@ -22,9 +22,12 @@ public class ForecastAdapter extends CursorAdapter {
     private static final int VIEW_TYPE_FUTURE_DAY = 1;
     private static final int VIEW_TYPE_COUNT = 2;
 
+    // Flag to determine if we want to use a separate view for "today".
+    private boolean mUseTodayLayout = true;
+
     @Override
     public int getItemViewType(int position) {
-        return position == 0 ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
+        return (position == 0 && mUseTodayLayout) ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
     }
 
     @Override
@@ -89,6 +92,9 @@ public class ForecastAdapter extends CursorAdapter {
         // Find TextView and set weather forecast on it
         viewHolder.descriptionView.setText(description);
 
+        // For accessibility, add a content description to the icon field
+        viewHolder.iconView.setContentDescription(description);
+
         // Read user preference for metric or imperial temperature units
         boolean isMetric = Utility.isMetric(context);
 
@@ -99,6 +105,10 @@ public class ForecastAdapter extends CursorAdapter {
         // Read low temperature from cursor
         double low = cursor.getDouble(ForecastFragment.COL_WEATHER_MIN_TEMP);
         viewHolder.lowTempView.setText(Utility.formatTemperature(context, low, isMetric));
+    }
+
+    public void setUseTodayLayout(boolean useTodayLayout) {
+        mUseTodayLayout = useTodayLayout;
     }
 
     /**
