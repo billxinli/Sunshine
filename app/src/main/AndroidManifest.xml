@@ -34,6 +34,12 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="li.bill.sunshine.MainActivity" />
         </activity>
+
+        <provider
+            android:name=".data.WeatherProvider"
+            android:authorities="li.bill.sunshine"
+            android:enabled="true"
+            android:exported="true" />
     </application>
 
 </manifest>
