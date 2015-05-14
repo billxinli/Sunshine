@@ -1,5 +1,6 @@
 package li.bill.sunshine;
 
+import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -10,6 +11,11 @@ import android.net.Uri;
 import android.widget.ImageView;
 import android.widget.RemoteViews;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import li.bill.sunshine.data.WeatherContract;
 
@@ -18,7 +24,7 @@ import li.bill.sunshine.data.WeatherContract;
  * Implementation of App Widget functionality.
  */
 public class SunshineWidget extends AppWidgetProvider {
-
+    private final String LOG_TAG = SunshineWidget.class.getSimpleName();
     private static final String ACTION_CLICK = "ACTION_CLICK";
 
     @Override
@@ -26,43 +32,45 @@ public class SunshineWidget extends AppWidgetProvider {
         // There may be multiple widgets active, so update all of them
         final int N = appWidgetIds.length;
         for (int i = 0; i < N; i++) {
-            updateAppWidget(context, appWidgetManager, appWidgetIds[i]);
+            RemoteViews views = updateView(context);
+            appWidgetManager.updateAppWidget(appWidgetIds[i], views);
         }
-    }
-
-
-    @Override
-    public void onEnabled(Context context) {
-        // Enter relevant functionality for when the first widget is created
     }
 
     @Override
     public void onDisabled(Context context) {
-        // Enter relevant functionality for when the last widget is disabled
+        Intent intent = new Intent(context, SunshineWidgetBroadcastReceiver.class);
+        PendingIntent sender = PendingIntent.getBroadcast(context, 0, intent, 0);
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        alarmManager.cancel(sender);
+        super.onDisabled(context);
     }
 
-    private static final String[] NOTIFY_WEATHER_PROJECTION = new String[]{
-            WeatherContract.WeatherEntry.COLUMN_WEATHER_ID,
-            WeatherContract.WeatherEntry.COLUMN_MAX_TEMP,
-            WeatherContract.WeatherEntry.COLUMN_MIN_TEMP,
-            WeatherContract.WeatherEntry.COLUMN_SHORT_DESC,
-            WeatherContract.WeatherEntry.COLUMN_DATE
-    };
-    // these indices must match the projection
-    private static final int INDEX_WEATHER_ID = 0;
-    private static final int INDEX_MAX_TEMP = 1;
-    private static final int INDEX_MIN_TEMP = 2;
-    private static final int INDEX_SHORT_DESC = 3;
-    private static final int INDEX_DATE = 4;
+    @Override
+    public void onEnabled(Context context) {
+        super.onEnabled(context);
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(context, SunshineWidgetBroadcastReceiver.class);
+        PendingIntent pi = PendingIntent.getBroadcast(context, 0, intent, 0);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + 1000 * 1, 1000, pi);
+    }
 
-    static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
+    public static RemoteViews updateView(Context context) {
+        final String[] NOTIFY_WEATHER_PROJECTION = new String[]{
+                WeatherContract.WeatherEntry.COLUMN_WEATHER_ID,
+                WeatherContract.WeatherEntry.COLUMN_MAX_TEMP,
+                WeatherContract.WeatherEntry.COLUMN_MIN_TEMP,
+                WeatherContract.WeatherEntry.COLUMN_SHORT_DESC,
+                WeatherContract.WeatherEntry.COLUMN_DATE
+        };
+        // these indices must match the projection
+        final int INDEX_WEATHER_ID = 0;
+        final int INDEX_MAX_TEMP = 1;
+        final int INDEX_MIN_TEMP = 2;
+        final int INDEX_SHORT_DESC = 3;
+        final int INDEX_DATE = 4;
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.sunshine_widget);
-        
-        Intent intent = new Intent(context, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
-        views.setOnClickPendingIntent(R.id.sunshine_widget, pendingIntent);
-
         String locationQuery = Utility.getPreferredLocation(context);
 
         Uri weatherUri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(locationQuery, System.currentTimeMillis());
@@ -79,6 +87,10 @@ public class SunshineWidget extends AppWidgetProvider {
             long dateInMillis = cursor.getLong(INDEX_DATE);
             // Find TextView and set formatted date on it
             views.setTextViewText(R.id.list_item_date_textview, Utility.getFriendlyDayString(context, dateInMillis));
+
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            Date date = new Date();
+            views.setTextViewText(R.id.list_item_date_textview, dateFormat.format(date));
 
             // Read weather forecast from cursor
             String description = cursor.getString(INDEX_SHORT_DESC);
@@ -97,10 +109,8 @@ public class SunshineWidget extends AppWidgetProvider {
             views.setTextViewText(R.id.list_item_low_textview, Utility.formatTemperature(context, low));
 
             views.setImageViewResource(R.id.list_item_icon, iconId);
-
         }
-        // Instruct the widget manager to update the widget
-        appWidgetManager.updateAppWidget(appWidgetId, views);
+        return views;
     }
 }
 
