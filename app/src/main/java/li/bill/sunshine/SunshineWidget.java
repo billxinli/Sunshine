@@ -33,6 +33,10 @@ public class SunshineWidget extends AppWidgetProvider {
         final int N = appWidgetIds.length;
         for (int i = 0; i < N; i++) {
             RemoteViews views = updateView(context);
+
+            Intent intent = new Intent(context, MainActivity.class);
+            PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
+            views.setOnClickPendingIntent(R.id.sunshine_widget, pendingIntent);
             appWidgetManager.updateAppWidget(appWidgetIds[i], views);
         }
     }
@@ -88,9 +92,9 @@ public class SunshineWidget extends AppWidgetProvider {
             // Find TextView and set formatted date on it
             views.setTextViewText(R.id.list_item_date_textview, Utility.getFriendlyDayString(context, dateInMillis));
 
-            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            DateFormat dateFormat = new SimpleDateFormat(" h:m a");
             Date date = new Date();
-            views.setTextViewText(R.id.list_item_date_textview, dateFormat.format(date));
+            views.setTextViewText(R.id.list_item_date_textview, Utility.getFriendlyDayString(context, dateInMillis) + dateFormat.format(date));
 
             // Read weather forecast from cursor
             String description = cursor.getString(INDEX_SHORT_DESC);
